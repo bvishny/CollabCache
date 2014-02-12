@@ -37,7 +37,7 @@ func NewCollabCache(quitChannel chan bool) *CollabCache {
 		quitChannel: quitChannel,
 	}
 	
-	go cache.Invalidator()
+	go cache.invalidator()
 	return cache
 }
 
@@ -84,7 +84,7 @@ func (self *CollabCache) GetOrPublish(key string, ttl int64, generatorFunc func(
  }
   
  // A goroutine that invalidates items every second
-func (self *CollabCache) Invalidator() {
+func (self *CollabCache) invalidator() {
  	ticker := time.NewTicker(time.Duration(1) * time.Second)
 	
 	for {
@@ -150,10 +150,15 @@ func (self *CollabCache) initializeKey(key string) bool {
 func (self *CollabCache) writeItem(key string, ttl int64, item interface{}) {
 	self.cache[key].item = item
 	now := time.Now().Unix()
-	self.cache[key].expires = now + ttl
-	self.cache[key].stale = now + (ttl / 2)
-	// Add to priority queue with expire time as priority
-	self.pqueue.Push(key, int(now + ttl))
+	
+	// If ttl is 0 key will not expire or become stale
+	if ttl != 0 {
+		self.cache[key].expires = now + ttl
+		self.cache[key].stale = now + (ttl / 2)
+		
+		// Add to priority queue with expire time as priority
+		self.pqueue.Push(key, int(now + ttl))
+	}
 }
 
 // Indicates whether a given key is expired
@@ -163,7 +168,7 @@ func (self *CollabCache) isExpired(key string) bool {
 
 // Indicates whether a given key is Stale
 func (self *CollabCache) isStale(key string) bool {
-	return self.cache[key].stale <= time.Now().Unix()
+	return self.cache[key].stale != 0 && self.cache[key].stale <= time.Now().Unix()
 }
 
 /* This function is a non-blocking call that regenerates a stale key - if the current thread is the first caller 
