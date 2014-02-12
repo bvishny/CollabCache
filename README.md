@@ -3,7 +3,7 @@ CollabCache
 
 CollabCache is a concurrent key-value store designed to store values that are **expensive to generate**. CollabCache has a single call:
 
-    **GetOrPublish(key string, ttl int64, generatorFunc func(string) interface{})**
+    GetOrPublish(key string, ttl int64, generatorFunc func(string) interface{})
 
 which takes a key, a TTL in seconds, and an anonymous function to generate the corresponding value. CollabCache ensures that the anonymous function (an expensive operation) is only run once - by the first goroutine to call GetOrPublish. Other goroutines will block until the this call completes then return the generated value. 
 
